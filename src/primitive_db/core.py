@@ -1,7 +1,28 @@
-"""Table schema management."""
+"""Table management and CRUD operations."""
 
 from primitive_db.constants import ID_COLUMN, VALID_TYPES
-from primitive_db.utils import remove_table_data, table_path
+from primitive_db.utils import load_table_data, remove_table_data, table_path
+
+
+def validate_fields(schema, fields, allow_id=True):
+    """Check names and exact types, keeping bool distinct from int."""
+    for column, value in fields.items():
+        if column not in schema:
+            raise KeyError(column)
+        if column == ID_COLUMN and not allow_id:
+            raise ValueError("ID формируется автоматически и не изменяется")
+        if schema[column] not in VALID_TYPES:
+            raise ValueError(f"неизвестный тип {schema[column]!r}")
+        if type(value) is not VALID_TYPES[schema[column]]:
+            raise ValueError(f"{column}: ожидается тип {schema[column]}")
+
+
+def matches(row, where_clause):
+    """Match all fields using both value and type."""
+    return all(
+        column in row and type(row[column]) is type(value) and row[column] == value
+        for column, value in (where_clause or {}).items()
+    )
 
 
 def create_table(metadata, table_name, columns):
@@ -34,3 +55,55 @@ def drop_table(metadata, table_name):
     remove_table_data(table_name)
     del metadata[table_name]
     return metadata
+
+
+def insert(metadata, table_name, values):
+    """Load rows and append a validated record with max(ID)+1."""
+    schema = metadata[table_name]
+    columns = [column for column in schema if column != ID_COLUMN]
+    if len(values) != len(columns):
+        raise ValueError(f"ожидается {len(columns)} значений без ID")
+    fields = dict(zip(columns, values, strict=True))
+    validate_fields(schema, fields, allow_id=False)
+    rows = load_table_data(table_name)
+    new_id = max((row[ID_COLUMN] for row in rows), default=0) + 1
+    rows.append({ID_COLUMN: new_id, **fields})
+    return rows
+
+
+def select(table_data, where_clause=None, schema=None):
+    """Return copies of records matching the condition."""
+    if schema is not None:
+        validate_fields(schema, where_clause or {})
+    return [row.copy() for row in table_data if matches(row, where_clause)]
+
+
+def update(table_data, set_clause, where_clause, schema=None):
+    """Validate an update before modifying any matching records."""
+    if not set_clause or not where_clause:
+        raise ValueError("нужны set и where")
+    if ID_COLUMN in set_clause:
+        raise ValueError("ID формируется автоматически и не изменяется")
+    if schema is not None:
+        validate_fields(schema, set_clause, allow_id=False)
+        validate_fields(schema, where_clause)
+    else:
+        for row in table_data:
+            for column, value in {**where_clause, **set_clause}.items():
+                if column not in row:
+                    raise KeyError(column)
+                if type(row[column]) is not type(value):
+                    raise ValueError(f"неверный тип столбца {column}")
+    return [
+        {**row, **set_clause} if matches(row, where_clause) else row.copy()
+        for row in table_data
+    ]
+
+
+def delete(table_data, where_clause, schema=None):
+    """Return the rows that do not match the validated condition."""
+    if not where_clause:
+        raise ValueError("нужно условие where")
+    if schema is not None:
+        validate_fields(schema, where_clause)
+    return [row.copy() for row in table_data if not matches(row, where_clause)]

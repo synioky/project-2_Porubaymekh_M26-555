@@ -7,8 +7,13 @@ ID_COLUMN = "ID"
 HELP = """***База данных***
 create_table <таблица> <столбец:тип> ...
 list_tables
-info <таблица>
 drop_table <таблица>
+insert into <таблица> values (<значение>, ...)
+select from <таблица> [where <столбец> = <значение>]
+update <таблица> set <столбец> = <значение> [, ...] where <столбец> = <значение>
+delete from <таблица> where <столбец> = <значение>
+info <таблица>
 help
 exit
+Типы: int, str, bool. Строки заключаются в кавычки, bool: true или false.
 """
