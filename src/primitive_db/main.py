@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Console entry point."""
 
+from primitive_db.engine import run
+
 
 def main():
-    """Run the package entry point."""
-    print("DB project is running!")
+    """Start the database application."""
+    run()
 
 
 if __name__ == "__main__":
