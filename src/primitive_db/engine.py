@@ -5,6 +5,7 @@ from prettytable import PrettyTable
 
 from primitive_db import core
 from primitive_db.constants import HELP, META_FILE
+from primitive_db.decorators import handle_db_errors
 from primitive_db.parser import parse_command
 from primitive_db.utils import (
     load_metadata,
@@ -40,7 +41,8 @@ def report_changes(before, after, table_name, action):
         print(f'Запись с ID={row["ID"]} в таблице "{table_name}" успешно {action}.')
 
 
-def execute_unchecked(text):
+@handle_db_errors
+def execute(text):
     """Execute one command and save successful mutations."""
     command, args = parse_command(text)
     if command == "exit":
@@ -114,15 +116,6 @@ def execute_unchecked(text):
                 action = "обновлена" if command == "update" else "удалена"
                 report_changes(rows, result, table_name, action)
     return True
-
-
-def execute(text):
-    """Report command errors without ending the input loop."""
-    try:
-        return execute_unchecked(text)
-    except (KeyError, ValueError, TypeError, OSError) as error:
-        print(f"Ошибка: {error}")
-        return None
 
 
 def run():

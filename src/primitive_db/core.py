@@ -1,7 +1,17 @@
 """Table management and CRUD operations."""
 
+import json
+
 from primitive_db.constants import ID_COLUMN, VALID_TYPES
+from primitive_db.decorators import (
+    confirm_action,
+    create_cacher,
+    handle_db_errors,
+    log_time,
+)
 from primitive_db.utils import load_table_data, remove_table_data, table_path
+
+_cache_select = create_cacher()
 
 
 def validate_fields(schema, fields, allow_id=True):
@@ -25,6 +35,7 @@ def matches(row, where_clause):
     )
 
 
+@handle_db_errors
 def create_table(metadata, table_name, columns):
     """Add a validated schema with an automatic integer ID column."""
     table_path(table_name)
@@ -48,6 +59,8 @@ def create_table(metadata, table_name, columns):
     return metadata
 
 
+@handle_db_errors
+@confirm_action("удаление таблицы")
 def drop_table(metadata, table_name):
     """Remove both the table schema and its data file."""
     if table_name not in metadata:
@@ -57,6 +70,8 @@ def drop_table(metadata, table_name):
     return metadata
 
 
+@handle_db_errors
+@log_time
 def insert(metadata, table_name, values):
     """Load rows and append a validated record with max(ID)+1."""
     schema = metadata[table_name]
@@ -71,13 +86,22 @@ def insert(metadata, table_name, values):
     return rows
 
 
+@handle_db_errors
+@log_time
 def select(table_data, where_clause=None, schema=None):
-    """Return copies of records matching the condition."""
+    """Return copies of cached matches, keyed by rows and condition."""
     if schema is not None:
         validate_fields(schema, where_clause or {})
-    return [row.copy() for row in table_data if matches(row, where_clause)]
+    # Including the rows prevents stale results after mutations or another session.
+    key = json.dumps([table_data, where_clause], sort_keys=True, ensure_ascii=False)
+    rows = _cache_select(
+        key,
+        lambda: [row.copy() for row in table_data if matches(row, where_clause)],
+    )
+    return [row.copy() for row in rows]
 
 
+@handle_db_errors
 def update(table_data, set_clause, where_clause, schema=None):
     """Validate an update before modifying any matching records."""
     if not set_clause or not where_clause:
@@ -100,6 +124,8 @@ def update(table_data, set_clause, where_clause, schema=None):
     ]
 
 
+@handle_db_errors
+@confirm_action("удаление записей")
 def delete(table_data, where_clause, schema=None):
     """Return the rows that do not match the validated condition."""
     if not where_clause:
