@@ -1,5 +1,3 @@
-"""Table management and CRUD operations."""
-
 import json
 
 from primitive_db.constants import ID_COLUMN, VALID_TYPES
@@ -15,7 +13,7 @@ _cache_select = create_cacher()
 
 
 def validate_fields(schema, fields, allow_id=True):
-    """Check names and exact types, keeping bool distinct from int."""
+    """Проверяет столбцы и типы. bool и int считаются разными типами."""
     for column, value in fields.items():
         if column not in schema:
             raise KeyError(column)
@@ -28,7 +26,7 @@ def validate_fields(schema, fields, allow_id=True):
 
 
 def matches(row, where_clause):
-    """Match all fields using both value and type."""
+    """Проверяет, подходит ли запись под условие."""
     return all(
         column in row and type(row[column]) is type(value) and row[column] == value
         for column, value in (where_clause or {}).items()
@@ -37,7 +35,7 @@ def matches(row, where_clause):
 
 @handle_db_errors
 def create_table(metadata, table_name, columns):
-    """Add a validated schema with an automatic integer ID column."""
+    """Добавляет таблицу с указанными столбцами и полем ID."""
     table_path(table_name)
     if table_name in metadata:
         raise ValueError(f'таблица "{table_name}" уже существует')
@@ -62,7 +60,7 @@ def create_table(metadata, table_name, columns):
 @handle_db_errors
 @confirm_action("удаление таблицы")
 def drop_table(metadata, table_name):
-    """Remove both the table schema and its data file."""
+    """Удаляет таблицу и файл с её записями."""
     if table_name not in metadata:
         raise KeyError(table_name)
     remove_table_data(table_name)
@@ -73,7 +71,7 @@ def drop_table(metadata, table_name):
 @handle_db_errors
 @log_time
 def insert(metadata, table_name, values):
-    """Load rows and append a validated record with max(ID)+1."""
+    """Добавляет запись с ID на единицу больше текущего максимума."""
     schema = metadata[table_name]
     columns = [column for column in schema if column != ID_COLUMN]
     if len(values) != len(columns):
@@ -89,10 +87,10 @@ def insert(metadata, table_name, values):
 @handle_db_errors
 @log_time
 def select(table_data, where_clause=None, schema=None):
-    """Return copies of cached matches, keyed by rows and condition."""
+    """Выбирает записи по условию и возвращает их копии."""
     if schema is not None:
         validate_fields(schema, where_clause or {})
-    # Including the rows prevents stale results after mutations or another session.
+    # Данные входят в ключ кэша, чтобы после изменений не получать старый результат.
     key = json.dumps([table_data, where_clause], sort_keys=True, ensure_ascii=False)
     rows = _cache_select(
         key,
@@ -103,7 +101,7 @@ def select(table_data, where_clause=None, schema=None):
 
 @handle_db_errors
 def update(table_data, set_clause, where_clause, schema=None):
-    """Validate an update before modifying any matching records."""
+    """Проверяет новые значения и обновляет записи по условию."""
     if not set_clause or not where_clause:
         raise ValueError("нужны set и where")
     if ID_COLUMN in set_clause:
@@ -127,7 +125,7 @@ def update(table_data, set_clause, where_clause, schema=None):
 @handle_db_errors
 @confirm_action("удаление записей")
 def delete(table_data, where_clause, schema=None):
-    """Return the rows that do not match the validated condition."""
+    """Удаляет записи, которые подходят под условие."""
     if not where_clause:
         raise ValueError("нужно условие where")
     if schema is not None:

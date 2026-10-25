@@ -1,5 +1,3 @@
-"""Interactive command loop and persistence orchestration."""
-
 import prompt
 from prettytable import PrettyTable
 
@@ -16,12 +14,12 @@ from primitive_db.utils import (
 
 
 def print_help():
-    """Display the supported command syntax."""
+    """Выводит список команд."""
     print(HELP)
 
 
 def show_rows(schema, rows):
-    """Display column headers even when the result contains no rows."""
+    """Выводит записи в виде таблицы."""
     table = PrettyTable(list(schema))
     for row in rows:
         table.add_row([row[column] for column in schema])
@@ -29,7 +27,7 @@ def show_rows(schema, rows):
 
 
 def report_changes(before, after, table_name, action):
-    """Report changed record IDs or an empty match."""
+    """Выводит ID изменённых записей или сообщает, что изменений нет."""
     if action == "удалена":
         remaining = {row["ID"] for row in after}
         changed = [row for row in before if row["ID"] not in remaining]
@@ -43,7 +41,7 @@ def report_changes(before, after, table_name, action):
 
 @handle_db_errors
 def execute(text):
-    """Execute one command and save successful mutations."""
+    """Выполняет команду и сохраняет изменения в файлы."""
     command, args = parse_command(text)
     if command == "exit":
         return False
@@ -105,7 +103,7 @@ def execute(text):
             if result is not None:
                 show_rows(schema, result)
         case "update" | "delete":
-            # Reject invalid conditions before asking for confirmation.
+            # Проверяем условие до запроса подтверждения.
             core.validate_fields(schema, args[-1])
             if command == "update":
                 result = core.update(rows, args[1], args[2], schema)
@@ -119,7 +117,7 @@ def execute(text):
 
 
 def run():
-    """Read commands until exit, EOF or a keyboard interruption."""
+    """Читает команды до выхода из программы."""
     print_help()
     while True:
         try:

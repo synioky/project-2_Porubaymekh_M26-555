@@ -1,10 +1,8 @@
-"""Parse commands while preserving the types of quoted literals."""
-
 import shlex
 
 
 def tokenize(text):
-    """Keep quoted strings intact and split command punctuation."""
+    """Разбивает команду на части, сохраняя кавычки вокруг строк."""
     lexer = shlex.shlex(text, posix=False, punctuation_chars="(),=")
     lexer.whitespace_split = True
     lexer.commenters = ""
@@ -18,7 +16,7 @@ def tokenize(text):
 
 
 def parse_value(token):
-    """Recognize quoted strings, integers and boolean values."""
+    """Определяет значение и его тип: str, int или bool."""
     if len(token) >= 2 and token[0] in "\"'" and token[-1] == token[0]:
         return token[1:-1]
     if token.lower() in ("true", "false"):
@@ -29,7 +27,7 @@ def parse_value(token):
 
 
 def parse_assignments(tokens):
-    """Parse one or more comma-separated column=value assignments."""
+    """Разбирает присваивания вида столбец = значение."""
     result = {}
     while tokens:
         if len(tokens) < 3 or tokens[1] != "=" or not tokens[0].isidentifier():
@@ -49,7 +47,7 @@ def parse_assignments(tokens):
 
 
 def parse_where(tokens):
-    """Parse the single equality condition required by the task."""
+    """Разбирает одно условие равенства после where."""
     result = parse_assignments(tokens)
     if len(result) != 1:
         raise ValueError("where поддерживает одно условие равенства")
@@ -57,7 +55,7 @@ def parse_where(tokens):
 
 
 def parse_values(tokens):
-    """Parse the parenthesized values list of an insert command."""
+    """Разбирает значения в скобках после values."""
     if len(tokens) < 2 or tokens[0] != "(" or tokens[-1] != ")":
         raise ValueError("после values нужны значения в скобках")
     inner = tokens[1:-1]
@@ -69,7 +67,7 @@ def parse_values(tokens):
 
 
 def parse_command(text):
-    """Return a command name and positional arguments for the engine."""
+    """Возвращает название команды и её аргументы."""
     tokens = tokenize(text)
     if not tokens:
         return "empty", ()
@@ -92,7 +90,7 @@ def parse_command(text):
                     return command, (tokens[2], parse_where(tokens[4:]))
         case "update" if len(tokens) >= 10:
             if tokens[2].lower() == "set":
-                # Quoted "where" tokens keep their quotes and cannot split a string.
+                # Слово where в кавычках остаётся частью значения.
                 split = next(
                     (i for i in range(3, len(tokens)) if tokens[i].lower() == "where"),
                     None,

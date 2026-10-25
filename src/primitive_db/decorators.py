@@ -1,5 +1,3 @@
-"""Error handling, confirmation, timing and a closure cache."""
-
 import time
 
 import prompt
@@ -8,14 +6,14 @@ from primitive_db.constants import CACHE_LIMIT
 
 
 def preserve_metadata(wrapper, func):
-    """Keep the wrapped function's public name and documentation."""
+    """Сохраняет имя и описание исходной функции."""
     wrapper.__name__ = func.__name__
     wrapper.__doc__ = func.__doc__
     return wrapper
 
 
 def handle_db_errors(func):
-    """Report input and storage errors and let the command loop continue."""
+    """Выводит ошибку и позволяет продолжить ввод команд."""
 
     def wrapper(*args, **kwargs):
         try:
@@ -34,7 +32,7 @@ def handle_db_errors(func):
 
 
 def confirm_action(action_name):
-    """Ask for explicit confirmation before a destructive operation."""
+    """Запрашивает подтверждение перед выполнением функции."""
 
     def decorate(func):
         def wrapper(*args, **kwargs):
@@ -53,7 +51,7 @@ def confirm_action(action_name):
 
 
 def log_time(func):
-    """Print elapsed time after a successful operation."""
+    """Выводит время выполнения функции."""
 
     def wrapper(*args, **kwargs):
         started = time.monotonic()
@@ -66,7 +64,7 @@ def log_time(func):
 
 
 def create_cacher():
-    """Return a function that caches computed values in a closure."""
+    """Создаёт функцию с кэшем в замыкании."""
     cache = {}
 
     def cache_result(key, value_func):

@@ -1,5 +1,3 @@
-"""Regression tests for parsing, persistence, validation and caching."""
-
 import contextlib
 import io
 import json
@@ -19,7 +17,7 @@ from primitive_db.utils import load_metadata, load_table_data
 
 
 class DatabaseTests(unittest.TestCase):
-    """Run each database case in an independent temporary working folder."""
+    """Каждый тест работает с отдельной временной базой."""
 
     def setUp(self):
         self.folder = tempfile.TemporaryDirectory(dir=Path(__file__).resolve().parent)
